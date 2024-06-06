@@ -1,0 +1,74 @@
+set ( LOCAL_LIBRARY_DIR ${CMAKE_CURRENT_LIST_DIR} )
+
+if ( ENABLE_BUILD_SHARED_LIBRARY )
+    # env
+    string ( TOLOWER ${MODULE_NAME} LOWER_MODULE_NAME )
+    if ( ENABLE_BUILD_WITH_PLATFORM_PREX )
+        set ( LOCAL_LIB_NAME ${PLATFORM_SYSTEM_TARGET}_${LOWER_MODULE_NAME} )
+    else ()
+        set ( LOCAL_LIB_NAME ${LOWER_MODULE_NAME} )
+    endif ()
+    set ( LOCAL_LIB_VERNO ${MODULE_VERNO} )
+    string ( REPLACE "." ";" LIST_LIB_VERNO ${LOCAL_LIB_VERNO} )
+    list ( GET LIST_LIB_VERNO 0 SUB_LIB_SOVERNO )
+    set ( BUILD_LIB_SOVERNO ${SUB_LIB_SOVERNO} )
+
+    # source
+    # c
+    if ( DEFINED MODULE_SOURCE_C_DIR )
+        file ( GLOB_RECURSE LOCAL_LIB_C_HEADERS CONFIGURE_DEPENDS ${MODULE_SOURCE_C_DIR}/*.h )
+        file ( GLOB_RECURSE LOCAL_LIB_C_SOURCES CONFIGURE_DEPENDS ${MODULE_SOURCE_C_DIR}/*.c )
+    endif()
+
+    # c++
+    if ( DEFINED MODULE_SOURCE_CXX_DIR )
+        file ( GLOB_RECURSE LOCAL_LIB_CXX_HEADERS CONFIGURE_DEPENDS ${MODULE_SOURCE_CXX_DIR}/*.h* )
+        file ( GLOB_RECURSE LOCAL_LIB_CXX_SOURCES CONFIGURE_DEPENDS ${MODULE_SOURCE_CXX_DIR}/*.c* )
+    endif()
+    #message ( WARNING ${LOCAL_LIB_C_HEADERS} ${LOCAL_LIB_C_SOURCES} )
+    #message ( WARNING ${LOCAL_LIB_CXX_HEADERS} ${LOCAL_LIB_CXX_SOURCES} )
+
+    set ( LOCAL_LIB_INCLUDE_DIRS "" )
+    foreach ( _headerFile ${LOCAL_LIB_C_HEADERS} )
+        get_filename_component( _dir ${_headerFile} PATH )
+        list ( APPEND LOCAL_LIB_INCLUDE_DIRS ${_dir} )
+    endforeach()
+    foreach ( _headerFile ${LOCAL_LIB_CXX_HEADERS} )
+        get_filename_component( _dir ${_headerFile} PATH )
+        list ( APPEND LOCAL_LIB_INCLUDE_DIRS ${_dir} )
+    endforeach()
+    list ( APPEND LOCAL_LIB_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} )
+    list ( APPEND LOCAL_LIB_INCLUDE_DIRS ${MODULE_EXTERNAL_INCLUDE_DIR} )
+    list ( REMOVE_DUPLICATES LOCAL_LIB_INCLUDE_DIRS )
+    #message ( WARNING ${LOCAL_LIB_INCLUDE_DIRS} )
+
+    # build
+    include_directories ( ${SDK_INCLUDE_DIR} ${LOCAL_LIB_INCLUDE_DIRS} ${MODULE_EXTERNAL_INCLUDE_DIR}  )
+    link_directories ( ${SDK_LIB_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${MODULE_EXTERNAL_LIB_DIR} )
+    #message ( WARNING ${LOCAL_LIB_NAME} ${SDK_INCLUDE_DIR} ${SDK_LIB_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${MODULE_EXTERNAL_LIB_DIR} )
+
+    add_library ( ${LOCAL_LIB_NAME} SHARED ${LOCAL_LIB_C_SOURCES} ${LOCAL_LIB_CXX_SOURCES} )
+    target_link_libraries ( ${LOCAL_LIB_NAME} PRIVATE ${MODULE_EXTERNAL_LIB} )
+
+    set_target_properties ( ${LOCAL_LIB_NAME} PROPERTIES VERSION ${LOCAL_LIB_VERNO} SOVERSION ${BUILD_LIB_SOVERNO} )
+    if ( BUILD_WITH_STRIP )
+        set_target_properties ( ${LOCAL_LIB_NAME} PROPERTIES LINK_FLAGS_RELEASE -s )
+    endif ()
+
+    # install
+    set ( LOCAL_INSTALL_INC_DIR ${INSTALL_INC_ROOT_DIR}/${LOWER_MODULE_NAME} )
+    set ( LOCAL_INSTALL_LIB_DIR ${INSTALL_LIB_ROOT_DIR} )
+
+    install ( TARGETS ${LOCAL_LIB_NAME} LIBRARY DESTINATION ${LOCAL_INSTALL_LIB_DIR} )
+
+    if ( DEFINED MODULE_INSTALL_SRC_DIR )
+        install ( DIRECTORY ${MODULE_INSTALL_SRC_DIR} DESTINATION ${LOCAL_INSTALL_INC_DIR} )
+    else ()
+        if ( DEFINED MODULE_SOURCE_C_DIR )
+            install ( DIRECTORY ${MODULE_SOURCE_C_DIR}/inc/ DESTINATION ${LOCAL_INSTALL_INC_DIR} )
+        endif ()
+        if ( DEFINED MODULE_SOURCE_CXX_DIR )
+            install ( DIRECTORY ${MODULE_SOURCE_CXX_DIR}/inc/ DESTINATION ${LOCAL_INSTALL_INC_DIR} )
+        endif ()
+    endif ()
+endif ()

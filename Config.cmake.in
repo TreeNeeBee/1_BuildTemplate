@@ -1,0 +1,46 @@
+#include(${PROJECT_ROOT}/build/build_cfg.cmake)
+
+if( NOT DEFINED PLATFORM_SYSTEM_TARGET )
+    set ( PLATFORM_SYSTEM_TARGET "ara" )
+endif()
+
+option ( ENABLE_BUILD_SHARED_LIBRARY "Enable build shared library" OFF )
+option ( ENABLE_BUILD_STATIC_LIBRARY "Enable build static library" OFF )
+option ( ENABLE_BUILD_EXECUTABLE "Enable build executable" OFF )
+option ( ENABLE_BUILD_DAEMON "Enable daemon" OFF )
+option ( ENABLE_BUILD_UNITTEST "Enable module unit test" OFF )
+option ( ENABLE_BUILD_BENCHMARK "Enable benchmark" OFF )
+option ( ENABLE_BUILD_PROTOBUF "Enable protobuf" OFF )
+option ( ENABLE_DAEMON_WITH_SYSTEMD "Has daemon control by systemd" OFF )
+option ( BUILD_WITH_OS_MAC "build in macos" OFF )
+option ( BUILD_WITH_STRIP "build with strip" ON )
+
+add_definitions ( "-DLIB_VERNO=\"${LIB_VERNO}\"" )
+
+set ( CMAKE_C_FLAGS "-Wall -Werror -Wextra -Wl,-rpath,. ${MODULE_EXTRA_COMPILE_C_OPTIONS} " )
+set ( CMAKE_C_FLAGS_DEBUG "-g3 -Og -DARA_DEBUG" CACHE STRING "Debug" FORCE )
+set ( CMAKE_C_FLAGS_RELEASE "-Os" CACHE STRING "Release" FORCE )
+
+set ( CMAKE_CXX_FLAGS "-std=c++14 -Wall -Werror -Wextra -Wl,-rpath,. ${MODULE_EXTRA_COMPILE_CXX_OPTIONS} " )
+set ( CMAKE_CXX_FLAGS_DEBUG "-g3 -Og -DARA_DEBUG" CACHE STRING "Debug" FORCE )
+set ( CMAKE_CXX_FLAGS_RELEASE "-Os" CACHE STRING "Release" FORCE )
+
+set ( CMAKE_BUILD_RPATH "." )
+
+set ( LOCAL_CONFIG_DIR ${CMAKE_CURRENT_LIST_DIR} )
+
+if( NOT DEFINED SDK_ROOT_DIR )
+    set ( SDK_ROOT_DIR /usr/local )
+endif ( )
+
+set ( SDK_INCLUDE_DIR ${SDK_ROOT_DIR}/include/${PLATFORM_SYSTEM_TARGET} )
+set ( SDK_LIB_DIR ${SDK_ROOT_DIR}/lib )
+
+set ( INSTALL_INC_ROOT_DIR ${SDK_ROOT_DIR}/include/${PLATFORM_SYSTEM_TARGET} )
+set ( INSTALL_LIB_ROOT_DIR ${SDK_ROOT_DIR}/lib )
+set ( INSTALL_BIN_ROOT_DIR ${SDK_ROOT_DIR}/bin )
+
+if ( BUILD_WITH_OS_MAC )
+    include_directories ( /opt/homebrew/include )
+    link_directories ( /opt/homebrew/lib )
+endif()

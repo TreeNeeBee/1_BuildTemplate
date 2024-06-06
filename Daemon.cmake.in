@@ -1,0 +1,54 @@
+set( LOCAL_DAEMON_DIR ${CMAKE_CURRENT_LIST_DIR} )
+
+if ( ENABLE_BUILD_DAEMON )
+    # env
+    if ( DEFINED MODULE_DAEMON_TARGET )
+        set ( LOCAL_DAEMON_TARGET ${MODULE_DAEMON_TARGET} )
+    else ()
+        string ( TOLOWER ${MODULE_NAME} LOWER_MODULE_NAME )
+        set ( LOCAL_DAEMON_TARGET ${LOWER_MODULE_NAME}d )
+    endif ()
+
+    file ( GLOB_RECURSE LOCAL_DAEMON_HEADERS CONFIGURE_DEPENDS ${MODULE_DAEMON_DIR}/*.h* )
+    file ( GLOB_RECURSE LOCAL_DAEMON_SOURCES CONFIGURE_DEPENDS ${MODULE_DAEMON_DIR}/*.c* )
+
+    set ( LOCAL_DAEMON_INCLUDE_DIRS "" )
+    foreach ( _headerFile ${LOCAL_DAEMON_HEADERS} )
+        get_filename_component( _dir ${_headerFile} PATH )
+        list ( APPEND LOCAL_DAEMON_INCLUDE_DIRS ${_dir} )
+    endforeach ()
+    list ( APPEND LOCAL_DAEMON_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} )
+    list ( APPEND LOCAL_DAEMON_INCLUDE_DIRS ${LOCAL_LIB_INCLUDE_DIRS} )         # include from library
+    list ( APPEND LOCAL_DAEMON_INCLUDE_DIRS ${SDK_INCLUDE_DIR} )
+    list ( REMOVE_DUPLICATES LOCAL_DAEMON_INCLUDE_DIRS )
+
+    add_executable ( ${LOCAL_DAEMON_TARGET} ${LOCAL_DAEMON_SOURCES} )
+
+    if ( BUILD_WITH_STRIP )
+        set_target_properties ( ${LOCAL_DAEMON_TARGET} PROPERTIES LINK_FLAGS_RELEASE -s )
+    endif ()
+
+    target_include_directories ( ${LOCAL_DAEMON_TARGET} PRIVATE ${LOCAL_DAEMON_INCLUDE_DIRS} )
+    target_link_libraries ( ${LOCAL_DAEMON_TARGET} ${MODULE_EXTERNAL_DAEMON_LIB} )
+    #message ( WARNING ${MODULE_EXTERNAL_DAEMON_LIB} )
+
+    set ( LOCAL_INSTALL_BIN_DIR ${INSTALL_BIN_ROOT_DIR} )
+    install ( TARGETS ${LOCAL_DAEMON_TARGET} RUNTIME DESTINATION ${LOCAL_INSTALL_BIN_DIR} )
+
+    if ( ENABLE_DAEMON_WITH_SYSTEMD )
+        set ( BUILD_SYSTEMD_CMAKE_DIR ${LOCAL_DAEMON_DIR}/systemd )
+        set ( DaemonService         ${LOCAL_DAEMON_TARGET} )
+        set ( DaemonDestination     ${LOCAL_INSTALL_BIN_DIR} )
+        set ( DaemonDescription     ${MODULE_DAEMONDESCRIPTION} )
+        set ( DaemonBefore          ${MODULE_DAEMONBEFORE} )
+        set ( DaemonAfter           ${MODULE_DAEMONAFTER} )
+        set ( DaemonRequire         ${MODULE_DAEMONREQUIRE} )
+
+        configure_file ( ${BUILD_SYSTEMD_CMAKE_DIR}/service.cmake ${CMAKE_BINARY_DIR}/systemd/${DaemonService}.service @ONLY )
+        configure_file ( ${BUILD_SYSTEMD_CMAKE_DIR}/preset.cmake ${CMAKE_BINARY_DIR}/systemd/98-${DaemonService}.preset @ONLY )
+        configure_file ( ${BUILD_SYSTEMD_CMAKE_DIR}/mklink.sh.cmake ${CMAKE_BINARY_DIR}/mklink.sh @ONLY )
+
+        install ( FILES ${CMAKE_BINARY_DIR}/systemd/${DaemonService}.service DESTINATION ${SDK_ROOT_DIR}/lib/systemd/system )
+        install ( FILES ${CMAKE_BINARY_DIR}/systemd/98-${DaemonService}.preset DESTINATION ${SDK_ROOT_DIR}/lib/systemd/system-preset )
+    endif()
+endif()
